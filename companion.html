@@ -1,0 +1,251 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>SpeedMeter Companion — GPS ブリッジ</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body {
+        margin: 0; padding: 0;
+        background: #0a0a0a;
+        color: #d8f5d8;
+        font-family: system-ui, -apple-system, sans-serif;
+      }
+      #app {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 20px 16px 60px;
+      }
+      h1 { font-size: 20px; margin: 0 0 12px; color: #8ef0a0; }
+      .desc {
+        font-size: 13px;
+        color: #a8c7a8;
+        background: #141714;
+        border-left: 3px solid #3a5c3a;
+        padding: 10px 12px;
+        margin: 0 0 16px;
+        line-height: 1.5;
+      }
+      .big {
+        font-family: monospace;
+        font-size: 80px;
+        font-weight: 700;
+        text-align: center;
+        margin: 24px 0 0;
+        letter-spacing: -2px;
+        color: #e4ffe4;
+      }
+      .unit {
+        text-align: center;
+        font-size: 20px;
+        color: #8ef0a0;
+        letter-spacing: 2px;
+        margin: 0 0 16px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 6px 16px;
+        font-size: 13px;
+        background: #141714;
+        border: 1px solid #26321f;
+        border-radius: 8px;
+        padding: 12px;
+      }
+      .row dt { color: #6f8a6f; margin: 0; }
+      .row dd { margin: 0; color: #e4ffe4; font-variant-numeric: tabular-nums; }
+      label { display: block; font-size: 13px; color: #a8c7a8; margin: 14px 0 4px; }
+      input, button {
+        width: 100%;
+        box-sizing: border-box;
+        background: #1a2b1a;
+        color: #d8f5d8;
+        border: 1px solid #3a5c3a;
+        border-radius: 8px;
+        padding: 10px 12px;
+        font-size: 14px;
+      }
+      button { cursor: pointer; margin-top: 12px; }
+      #status {
+        margin: 14px 0 0;
+        padding: 10px 12px;
+        background: #141714;
+        border-left: 3px solid #3a5c3a;
+        font-size: 13px;
+        color: #a8c7a8;
+        min-height: 18px;
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <h1>SpeedMeter Companion</h1>
+      <p class="desc">
+        このページは <b>Android Chrome</b> で開いてください。<br />
+        GPS を読み取り、クラウド経由で Even Hub 側の SpeedMeter に送信します。<br />
+        Even Hub 側 / G2 を使う間は <b>このタブを前面</b> or <b>画面ON</b> にしておいてください (Android が裏に回した Chrome の GPS を止めるため)。
+      </p>
+
+      <div class="big" id="speed">--</div>
+      <div class="unit">km/h</div>
+
+      <dl class="row">
+        <dt>状態</dt><dd id="state">待機</dd>
+        <dt>Session</dt><dd id="sess">—</dd>
+        <dt>精度</dt><dd id="acc">—</dd>
+        <dt>送信回数</dt><dd id="sent">0</dd>
+      </dl>
+
+      <label for="code">セッションコード (SpeedMeter 本体と揃える)</label>
+      <input id="code" type="text" inputmode="latin" autocomplete="off" placeholder="例: ABCD1234" />
+
+      <button id="startBtn">GPS 読み取り + 送信 開始</button>
+      <button id="stopBtn">停止</button>
+
+      <div id="status">コードを入力して "開始" を押すと、GPS 許可ダイアログが出ます。</div>
+    </div>
+
+    <script>
+      const NTFY_BASE = 'https://ntfy.sh'
+      const dom = {
+        speed: document.getElementById('speed'),
+        state: document.getElementById('state'),
+        sess: document.getElementById('sess'),
+        acc: document.getElementById('acc'),
+        sent: document.getElementById('sent'),
+        code: document.getElementById('code'),
+        startBtn: document.getElementById('startBtn'),
+        stopBtn: document.getElementById('stopBtn'),
+        status: document.getElementById('status'),
+      }
+
+      const params = new URLSearchParams(location.hash.replace(/^#/, ''))
+      const paramCode = params.get('code')
+      const savedCode = localStorage.getItem('speedmeter-companion-code')
+      dom.code.value = paramCode || savedCode || ''
+      if (dom.code.value) dom.sess.textContent = dom.code.value
+
+      let watchId = null
+      let sentCount = 0
+      let lastSpeedMps = null
+      let lastPos = null
+
+      function setStatus(msg) {
+        dom.status.textContent = msg
+        console.log('[companion]', msg)
+      }
+
+      function topicName(code) {
+        // ntfy.sh のトピック。衝突避けるため prefix 付ける。
+        return 'speedmeter-g2-' + code.trim().toLowerCase()
+      }
+
+      function haversineSpeed(a, b) {
+        const dt = (b.timestamp - a.timestamp) / 1000
+        if (dt <= 0) return 0
+        const R = 6371000
+        const toRad = (d) => (d * Math.PI) / 180
+        const dLat = toRad(b.coords.latitude - a.coords.latitude)
+        const dLon = toRad(b.coords.longitude - a.coords.longitude)
+        const s1 = Math.sin(dLat / 2)
+        const s2 = Math.sin(dLon / 2)
+        const c =
+          s1 * s1 +
+          Math.cos(toRad(a.coords.latitude)) * Math.cos(toRad(b.coords.latitude)) * s2 * s2
+        const d = 2 * R * Math.asin(Math.min(1, Math.sqrt(c)))
+        return d / dt
+      }
+
+      async function postSpeed(code, speedMps, accuracy, rawLat, rawLng) {
+        const topic = topicName(code)
+        const body = JSON.stringify({
+          speed: speedMps,
+          accuracy,
+          lat: rawLat,
+          lng: rawLng,
+          ts: Date.now(),
+        })
+        try {
+          await fetch(`${NTFY_BASE}/${encodeURIComponent(topic)}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Title': 'speedmeter',
+              'Tags': 'gps',
+            },
+            body,
+          })
+          sentCount++
+          dom.sent.textContent = String(sentCount)
+        } catch (e) {
+          setStatus('送信失敗: ' + (e && e.message || e))
+        }
+      }
+
+      function handlePosition(pos) {
+        const code = dom.code.value.trim()
+        if (!code) return
+        const accuracy = pos.coords.accuracy || 0
+        let speedMps = typeof pos.coords.speed === 'number' && !Number.isNaN(pos.coords.speed) ? Math.max(0, pos.coords.speed) : null
+        if (speedMps == null && lastPos) {
+          speedMps = haversineSpeed(lastPos, pos)
+        }
+        if (speedMps == null) speedMps = 0
+        lastPos = pos
+        lastSpeedMps = speedMps
+        const kmh = speedMps * 3.6
+        dom.speed.textContent = kmh < 0.5 ? '0' : kmh < 10 ? kmh.toFixed(1) : Math.round(kmh).toString()
+        dom.acc.textContent = accuracy ? `±${Math.round(accuracy)} m` : '—'
+        void postSpeed(code, speedMps, accuracy, pos.coords.latitude, pos.coords.longitude)
+      }
+
+      function handleError(err) {
+        setStatus(`GPS エラー: code=${err.code} ${err.message}`)
+      }
+
+      dom.startBtn.addEventListener('click', () => {
+        const code = dom.code.value.trim()
+        if (!code) { setStatus('セッションコードを入力してください'); return }
+        localStorage.setItem('speedmeter-companion-code', code)
+        dom.sess.textContent = code
+        if (!('geolocation' in navigator)) { setStatus('このブラウザは geolocation 非対応'); return }
+        if (watchId != null) { setStatus('既に起動中'); return }
+        setStatus('GPS 許可ダイアログが出たら "許可" を。')
+        watchId = navigator.geolocation.watchPosition(handlePosition, handleError, {
+          enableHighAccuracy: true,
+          maximumAge: 1000,
+          timeout: 20000,
+        })
+        dom.state.textContent = '実行中'
+      })
+
+      dom.stopBtn.addEventListener('click', () => {
+        if (watchId != null) {
+          navigator.geolocation.clearWatch(watchId)
+          watchId = null
+        }
+        dom.state.textContent = '停止'
+        setStatus('停止しました')
+      })
+
+      // 画面 OFF 抑止 (Wake Lock)
+      let wakeLock = null
+      async function requestWakeLock() {
+        try {
+          if ('wakeLock' in navigator) {
+            wakeLock = await navigator.wakeLock.request('screen')
+            wakeLock.addEventListener('release', () => console.log('[companion] wake lock released'))
+          }
+        } catch (e) {
+          console.warn('wake lock failed:', e)
+        }
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') void requestWakeLock()
+      })
+      void requestWakeLock()
+    </script>
+  </body>
+</html>
