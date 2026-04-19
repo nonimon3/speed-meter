@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+    <title>SpeedMeter – Even G2</title>
+    <style>
+      :root { color-scheme: dark; }
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #0a0a0a;
+        color: #d8f5d8;
+        font-family: system-ui, -apple-system, "Helvetica Neue", sans-serif;
+      }
+      #app {
+        max-width: 480px;
+        margin: 0 auto;
+        padding: 24px 20px 80px;
+      }
+      h1 {
+        font-size: 20px;
+        margin: 0 0 16px;
+        color: #8ef0a0;
+      }
+      .speed {
+        font-family: "SF Mono", Menlo, Consolas, monospace;
+        font-size: 96px;
+        font-weight: 700;
+        text-align: center;
+        line-height: 1.0;
+        margin: 24px 0 0;
+        letter-spacing: -2px;
+      }
+      .unit {
+        text-align: center;
+        font-size: 22px;
+        color: #8ef0a0;
+        margin: 4px 0 24px;
+        letter-spacing: 2px;
+      }
+      .meta {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 16px;
+        background: #141714;
+        border: 1px solid #26321f;
+        border-radius: 10px;
+        padding: 14px 16px;
+        font-size: 14px;
+      }
+      .meta dt { color: #6f8a6f; margin: 0; }
+      .meta dd { margin: 0 0 4px; color: #e4ffe4; font-variant-numeric: tabular-nums; }
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin: 16px 0 0;
+      }
+      button {
+        flex: 1;
+        padding: 12px 14px;
+        font-size: 14px;
+        border: 1px solid #3a5c3a;
+        background: #1a2b1a;
+        color: #d8f5d8;
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      button:disabled { opacity: 0.5; }
+      button[aria-pressed="true"] {
+        background: #2b4a2b;
+        border-color: #6fbf6f;
+        color: #e8ffe8;
+      }
+      select {
+        flex: 1;
+        padding: 12px 10px;
+        font-size: 14px;
+        border: 1px solid #3a5c3a;
+        background: #1a2b1a;
+        color: #d8f5d8;
+        border-radius: 8px;
+      }
+      code {
+        background: #0f1a0f;
+        padding: 2px 6px;
+        border-radius: 4px;
+        color: #8ef0a0;
+        font-size: 12px;
+      }
+      #status {
+        margin: 12px 0 0;
+        padding: 10px 12px;
+        background: #141714;
+        border-left: 3px solid #3a5c3a;
+        font-size: 13px;
+        color: #a8c7a8;
+        min-height: 18px;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .hint {
+        font-size: 12px;
+        color: #6f8a6f;
+        margin: 14px 0 0;
+        line-height: 1.5;
+      }
+    </style>
+    <script type="module" crossorigin src="/speed-meter/assets/index-BqJvgWiB.js"></script>
+  </head>
+  <body>
+    <div id="app">
+      <h1>SpeedMeter — Even G2</h1>
+      <div class="speed" id="speedValue">--</div>
+      <div class="unit" id="speedUnit">km/h</div>
+      <dl class="meta">
+        <dt>最大</dt><dd id="maxVal">--</dd>
+        <dt>平均</dt><dd id="avgVal">--</dd>
+        <dt>精度</dt><dd id="accVal">--</dd>
+        <dt>固定</dt><dd id="fixVal">--</dd>
+      </dl>
+      <div class="actions">
+        <button id="unitBtn">単位切替</button>
+        <button id="resetBtn">リセット</button>
+        <button id="retryBtn">GPS 再試行</button>
+      </div>
+      <div class="actions">
+        <button id="mockBtn" aria-pressed="false">Mock: OFF</button>
+        <select id="mockProfile" aria-label="Mock 走行プロファイル">
+          <option value="walk">walk (徒歩)</option>
+          <option value="city" selected>city (市街地)</option>
+          <option value="highway">highway (高速)</option>
+        </select>
+      </div>
+      <div id="status">起動中…</div>
+      <p class="hint">
+        Simulator では GPS が使えないので「Mock: ON」にすると適当な速度が流れます。<br />
+        URL に <code>?mock=1</code> を付けると自動で Mock 起動。<code>?mock=1&amp;profile=highway</code> でプロファイル指定も可。<br />
+        タップ = 単位切替 (km/h ⇔ mph) / ダブルタップ = 終了 / Mock 中はスクロールでプロファイル切替
+      </p>
+    </div>
+  </body>
+</html>
