@@ -17,6 +17,12 @@ export default defineConfig(({ mode, command }) => {
     build: {
       target: 'es2022',
       outDir: 'dist',
+      rollupOptions: {
+        input: {
+          main: 'index.html',
+          companion: 'companion.html',
+        },
+      },
     },
   }
 })

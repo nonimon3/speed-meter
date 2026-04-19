@@ -13,6 +13,7 @@ import {
   mpsToMph,
 } from './gps'
 import { ImuSpeedometer } from './imuSpeed'
+import { RemoteSpeedSource } from './remoteSource'
 import { bigDigits, bigDigitsRightAlignIndent, padAllRows, FW_SPACE } from './bigText'
 
 type Unit = 'kmh' | 'mph'
@@ -61,6 +62,9 @@ const dom = {
   mockBtn: document.getElementById('mockBtn') as HTMLButtonElement,
   profileSel: document.getElementById('mockProfile') as HTMLSelectElement | null,
   retryBtn: document.getElementById('retryBtn') as HTMLButtonElement | null,
+  remoteCode: document.getElementById('remoteCode') as HTMLInputElement | null,
+  remoteConnectBtn: document.getElementById('remoteConnectBtn') as HTMLButtonElement | null,
+  remoteDisconnectBtn: document.getElementById('remoteDisconnectBtn') as HTMLButtonElement | null,
 }
 
 function setStatus(msg: string): void {
@@ -217,17 +221,43 @@ async function boot() {
   const imu = new ImuSpeedometer()
   void imu; void tryStartImuManual
 
+  // Chrome 経由 GPS ブリッジ (ntfy.sh 中継)
+  const remote = new RemoteSpeedSource()
+  remote.onSample((s) => {
+    // 離脱防止: mock を止めてリモートを優先する
+    if (state.mock) {
+      state.mock = false
+      updateMockButton()
+      gps.stop()
+    }
+    gps.injectExternal(s.speed, s.accuracy || 5, 'native')
+  })
+  const savedCode = localStorage.getItem('speedmeter-remote-code') ?? ''
+  if (dom.remoteCode) dom.remoteCode.value = savedCode
+  dom.remoteConnectBtn?.addEventListener('click', () => {
+    const code = (dom.remoteCode?.value ?? '').trim()
+    if (!code) { setStatus('セッションコードを入力してください'); return }
+    localStorage.setItem('speedmeter-remote-code', code)
+    remote.start(code)
+    setStatus(`Remote (Chrome 経由 GPS) を接続: code=${code}\n` +
+      'Android Chrome で companion.html を開き、同じコードで開始してください。')
+  })
+  dom.remoteDisconnectBtn?.addEventListener('click', () => {
+    remote.stop()
+    setStatus('Remote 切断')
+  })
+
   gps.onError(async (err) => {
     if (err.code === err.PERMISSION_DENIED) {
-      // Android WebView の既知挙動: HTTP 配信だと geolocation を silent deny する。
-      // ehpk インストール時は Even Hub が http:// で配信するのでここに落ちる。
-      // → HTTPS (QR スキャンで LAN の HTTPS dev server 読み込み) なら通る可能性がある。
+      // 2026-04-19 実機確認済: Even Hub v0.0.10 の WebView は HTTP/HTTPS どちらでも
+      // Web Geolocation を silent deny する。SDK 側にも location 取得 API が無い。
+      // → アプリ側からの直接 GPS 取得は不可能。Mock で UI は動かす。
       gps.stop()
       setStatus(
-        '位置情報が WebView でブロックされました (HTTP 配信のため Android WebView が silent deny)。\n\n'
-        + '回避策: PC で "npm run start:https" → QR を Android の Even Hub で読み込み → HTTPS 経由でアプリ起動。\n'
-        + 'これで許可ダイアログが出るはず。\n\n'
-        + '応急として Mock モードに切替。',
+        'Even Hub WebView が位置情報をブロック (実機検証済、HTTP/HTTPS 問わず発生)。\n'
+        + 'SDK に location bridge も無いため、本アプリからの GPS 取得は現状不可能。\n'
+        + 'Even Hub のアップデートで Web Geolocation 対応 or location API 追加を待つ必要あり。\n\n'
+        + '→ Mock モードで動作継続。',
       )
       if (!state.mock) {
         state.mock = true

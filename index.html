@@ -131,6 +131,22 @@
           <option value="highway">highway (高速)</option>
         </select>
       </div>
+
+      <details style="margin-top: 12px; background: #141714; border: 1px solid #26321f; border-radius: 8px; padding: 10px 12px;">
+        <summary style="cursor: pointer; color: #8ef0a0; font-size: 13px;">Chrome 経由 GPS ブリッジ (Even Hub WebView の代替)</summary>
+        <p style="font-size: 12px; color: #a8c7a8; line-height: 1.5; margin: 10px 0;">
+          Even Hub WebView は GPS を遮断するので、別の Chrome タブで companion.html を開き GPS を読ませ、ntfy.sh 経由でこちらに中継する仕組み。
+        </p>
+        <label for="remoteCode" style="display: block; font-size: 12px; color: #a8c7a8; margin: 8px 0 4px;">セッションコード (英数字、両方で揃える)</label>
+        <input id="remoteCode" type="text" autocomplete="off" placeholder="例: ABCD1234" style="width: 100%; box-sizing: border-box; padding: 8px 10px; background: #1a2b1a; border: 1px solid #3a5c3a; border-radius: 6px; color: #d8f5d8; font-size: 14px;" />
+        <div class="actions" style="margin-top: 8px;">
+          <button id="remoteConnectBtn">Remote 接続</button>
+          <button id="remoteDisconnectBtn">切断</button>
+        </div>
+        <p style="font-size: 12px; color: #6f8a6f; margin: 8px 0 0; line-height: 1.5;">
+          Android の Chrome で <code style="background:#0f1a0f;padding:2px 4px;border-radius:3px;color:#8ef0a0;">https://nonimon3.github.io/speed-meter/companion.html</code> を開き、同じコードで開始してください。
+        </p>
+      </details>
       <div id="status">起動中…</div>
       <p class="hint">
         Simulator では GPS が使えないので「Mock: ON」にすると適当な速度が流れます。<br />

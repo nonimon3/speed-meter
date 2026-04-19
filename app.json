@@ -2,7 +2,7 @@
   "package_id": "com.evenhub.speedmeter",
   "edition": "202601",
   "name": "SpeedMeter",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "min_app_version": "0.1.0",
   "min_sdk_version": "0.0.10",
   "tagline": "Real-time GPS speedometer on your G2",
@@ -14,6 +14,13 @@
     {
       "name": "location",
       "desc": "Reads the phone's GPS location to calculate your current speed."
+    },
+    {
+      "name": "network",
+      "desc": "Chrome 経由 GPS ブリッジのための ntfy.sh 中継接続",
+      "whitelist": [
+        "https://ntfy.sh/*"
+      ]
     }
   ]
 }

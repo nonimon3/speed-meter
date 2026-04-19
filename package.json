@@ -1,6 +1,6 @@
 {
   "name": "even-speed-meter",
-  "version": "0.11.0",
+  "version": "0.12.0",
   "private": true,
   "description": "Even G2 GPS speedometer (km/h) using the phone's geolocation",
   "type": "module",
@@ -20,7 +20,7 @@
     "deploy:surge": "npm run build && surge dist speed-meter-g2.surge.sh",
     "qr:surge": "node scripts/qr.mjs --url https://speed-meter-g2.surge.sh/",
     "deploy:pages": "npm run build && gh-pages -d dist",
-    "qr:pages": "node scripts/qr.mjs --url https://a2spxs.github.io/speed-meter/"
+    "qr:pages": "node scripts/qr.mjs --url https://nonimon3.github.io/speed-meter/"
   },
   "dependencies": {
     "@evenrealities/even_hub_sdk": "^0.0.10"

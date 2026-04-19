@@ -1,1 +1,1 @@
-{"root":["./src/bigtext.ts","./src/g2.ts","./src/gps.ts","./src/imuspeed.ts","./src/main.ts","./src/renderspeed.ts"],"version":"5.9.3"}
+{"root":["./src/bigtext.ts","./src/g2.ts","./src/gps.ts","./src/imuspeed.ts","./src/main.ts","./src/remotesource.ts","./src/renderspeed.ts"],"version":"5.9.3"}
