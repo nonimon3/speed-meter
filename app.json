@@ -1,0 +1,19 @@
+{
+  "package_id": "com.evenhub.speedmeter",
+  "edition": "202601",
+  "name": "SpeedMeter",
+  "version": "0.11.0",
+  "min_app_version": "0.1.0",
+  "min_sdk_version": "0.0.10",
+  "tagline": "Real-time GPS speedometer on your G2",
+  "description": "SpeedMeter reads the phone's GPS to show your current speed in km/h (or mph) directly on the Even G2 display. Tap to switch units, double-tap to exit.",
+  "author": "speed-meter",
+  "entrypoint": "index.html",
+  "supported_languages": ["ja", "en"],
+  "permissions": [
+    {
+      "name": "location",
+      "desc": "Reads the phone's GPS location to calculate your current speed."
+    }
+  ]
+}
